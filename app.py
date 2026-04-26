@@ -1,45 +1,39 @@
 import streamlit as st
 from huggingface_hub import InferenceClient
 
-# 1. Jouw persoonlijke instellingen
+# Jouw token (deze blijft hetzelfde)
 TOKEN = "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"
-MODEL_ID = "mistralai/Mistral-7B-Instruct-v0.3"
+# We gebruiken nu een ander model dat stabieler is
+MODEL_ID = "meta-llama/Llama-3.2-1B-Instruct"
+
 client = InferenceClient(MODEL_ID, token=TOKEN)
 
-st.set_page_config(page_title="Mijn Talkie Kloon", page_icon="🤖")
-st.title("🤖 Mijn AI Character")
-st.caption("Gratis en zonder advertenties")
+st.set_page_config(page_title="Mijn Talkie", page_icon="🤖")
+st.title("🤖 Mijn Eigen Chat")
 
-# 2. Geef je karakter een persoonlijkheid (zoals in Talkie)
-if "system_prompt" not in st.session_state:
-    st.session_state.system_prompt = "Je bent een vriendelijke, behulpzame AI met een eigen persoonlijkheid. Je praat in het Nederlands."
-
-# 3. Chat geschiedenis bijhouden
 if "messages" not in st.session_state:
     st.session_state.messages = []
 
-# Toon de chat
+# Toon geschiedenis
 for message in st.session_state.messages:
     with st.chat_message(message["role"]):
         st.markdown(message["content"])
 
-# 4. De chat interactie
-if prompt := st.chat_input("Zeg iets tegen je AI..."):
+# Chat invoer
+if prompt := st.chat_input("Typ hier iets..."):
     st.session_state.messages.append({"role": "user", "content": prompt})
     with st.chat_message("user"):
         st.markdown(prompt)
 
-    with st.chat_message("assistant"):
-        # We sturen de persoonlijkheid en de chat mee naar de AI
-        messages_to_send = [{"role": "system", "content": st.session_state.system_prompt}]
-        messages_to_send.extend([{"role": m["role"], "content": m["content"]} for m in st.session_state.messages])
-        
-        response = client.chat_completion(
-            messages=messages_to_send,
-            max_tokens=500,
-        )
-        
-        full_response = response.choices[0].message.content
-        st.markdown(full_response)
-    
-    st.session_state.messages.append({"role": "assistant", "content": full_response})
+    try:
+        with st.chat_message("assistant"):
+            # De AI aanroepen
+            response = client.text_generation(
+                prompt,
+                max_new_tokens=500,
+                return_full_text=False
+            )
+            st.markdown(response)
+            st.session_state.messages.append({"role": "assistant", "content": response})
+    except Exception as e:
+        st.error("De AI slaapt nog even. Probeer het over 10 seconden nog eens!")
